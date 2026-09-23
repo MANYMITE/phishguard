@@ -8,3 +8,8 @@ venv/
 .DS_Store
 server.log
 audit.log
+tunnel.log
+phishguard-server.log
+.pg-server.log
+.pg-server.pid
+.pg-edge-*
