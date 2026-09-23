@@ -35,6 +35,17 @@ activate_venv() {
   fi
 }
 
+# Fully detach background jobs from the launching terminal/session so the
+# tunnel survives (setsid is the reliable way; plain nohup can get HUP'd
+# through process trees in WSL and some shells).
+run_detached() {
+  if have setsid; then
+    setsid nohup "$@" &
+  else
+    nohup "$@" &
+  fi
+}
+
 if [ -z "${PHISHGUARD_SECRET_KEY:-}" ]; then
   echo "✖ Set PHISHGUARD_SECRET_KEY first (it is the admin password)."
   echo "    export PHISHGUARD_SECRET_KEY=\"a-long-random-string\""
@@ -43,7 +54,7 @@ fi
 
 activate_venv
 echo "[*] Starting PhishGuard on 127.0.0.1:$PORT ..."
-PHISHGUARD_BEHIND_PROXY=1 PORT="$PORT" nohup python run.py > phishguard-server.log 2>&1 &
+PHISHGUARD_BEHIND_PROXY=1 PORT="$PORT" run_detached python run.py > phishguard-server.log 2>&1
 APP_PID=$!
 trap '[ -n "${TUNNEL_PID:-}" ] && kill "$TUNNEL_PID" 2>/dev/null || true; kill "$APP_PID" 2>/dev/null || true' EXIT
 for _ in $(seq 1 30); do grep -q "Running on" phishguard-server.log 2>/dev/null && break; sleep 0.5; done
@@ -120,11 +131,12 @@ start_tunnel() {
       if have lt || have npx; then
         echo "[*] Starting localtunnel..."
         if have lt; then
-          nohup lt --port "$PORT" > tunnel.log 2>&1 &
+          run_detached lt --port "$PORT" > tunnel.log 2>&1
+          TUNNEL_PID=$!
         else
-          nohup npx -y localtunnel --port "$PORT" > tunnel.log 2>&1 &
+          run_detached npx -y localtunnel --port "$PORT" > tunnel.log 2>&1
+          TUNNEL_PID=$!
         fi
-        TUNNEL_PID=$!
         for _ in $(seq 1 30); do grep -oE "https://[a-z0-9-]+\.loca\.lt" tunnel.log 2>/dev/null | head -1 | grep -q . && break; sleep 1; done
         URL=$(grep -oE "https://[a-z0-9-]+\.loca\.lt" tunnel.log | head -1)
         [ -n "$URL" ] && { echo; echo "[i] localtunnel may show a tunnel-password page"; echo "    (visitors enter your public IP once)."; print_urls "$URL"; wait; return; }
@@ -135,7 +147,7 @@ start_tunnel() {
     lan)
       echo "[*] LAN mode: restarting app on 0.0.0.0 ..."
       kill "$APP_PID" 2>/dev/null || true
-      PHISHGUARD_BEHIND_PROXY=1 PHISHGUARD_HOST=0.0.0.0 PORT="$PORT" nohup python run.py > phishguard-server.log 2>&1 &
+      PHISHGUARD_BEHIND_PROXY=1 PHISHGUARD_HOST=0.0.0.0 PORT="$PORT" run_detached python run.py > phishguard-server.log 2>&1
       APP_PID=$!
       IP=$(hostname -I 2>/dev/null | awk '{print $1}')
       [ -z "$IP" ] && IP="<your-machine-ip>"
