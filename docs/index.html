@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PhishGuard — consent-based phishing awareness training</title>
+<meta name="description" content="PhishGuard: run realistic phishing simulations for people who agreed to be trained — and never store their credentials, ever. Free, open source, runs on any Linux distro, macOS or Windows.">
+<style>
+  :root{
+    --bg:#0a0f0a; --panel:#0f1a10; --line:#1e3a1e; --green:#39ff5a; --dim:#7fbf8f;
+    --text:#d6f5d6; --red:#ff4d5e; --amber:#ffd166; --cyan:#5ad7ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font:16px/1.65 "JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  a{color:var(--green)}
+  .wrap{max-width:900px;margin:0 auto;padding:0 1.25rem}
+  header{border-bottom:1px solid var(--line);padding:1rem 0}
+  header .wrap{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.6rem}
+  .brand{color:var(--green);font-weight:700}
+  .brand .shield{color:var(--text)}
+  nav a{margin-left:1.2rem;color:var(--dim);text-decoration:none}
+  nav a:hover{color:var(--green)}
+  .hero{padding:4.5rem 0 3rem}
+  .term{border:1px solid var(--line);border-radius:10px;background:var(--panel);
+    box-shadow:0 0 40px rgba(57,255,90,.06)}
+  .term-bar{display:flex;gap:.4rem;padding:.6rem .9rem;border-bottom:1px solid var(--line)}
+  .term-bar i{width:.7rem;height:.7rem;border-radius:50%;display:inline-block}
+  .term-bar i:nth-child(1){background:#ff5f56}.term-bar i:nth-child(2){background:#ffbd2e}.term-bar i:nth-child(3){background:#27c93f}
+  .term-body{padding:1.4rem 1.6rem;white-space:pre;overflow-x:auto;font-size:.92rem}
+  .g{color:var(--green)}.r{color:var(--red)}.y{color:var(--amber)}.c{color:var(--cyan)}.d{color:var(--dim)}
+  h2{color:var(--green);font-size:1.15rem;margin:2.6rem 0 .8rem}
+  h2::before{content:"┌─[ ";color:var(--dim)}
+  h2::after{content:" ]";color:var(--dim)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1rem;margin:1rem 0}
+  .card{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:1.1rem 1.2rem}
+  .card b{color:var(--green)}
+  .card p{margin:.4rem 0 0;color:var(--dim);font-size:.9rem}
+  ol.steps{padding-left:1.3rem}
+  ol.steps li{margin:.5rem 0}
+  code{background:#12240f;border:1px solid var(--line);border-radius:5px;padding:.1rem .4rem;color:var(--amber);font-size:.88em}
+  pre.code{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:1rem 1.2rem;overflow-x:auto;font-size:.88rem}
+  .banner{border:1px dashed var(--amber);border-radius:10px;padding:.9rem 1.1rem;color:var(--amber);font-size:.9rem;margin:1.5rem 0}
+  footer{border-top:1px solid var(--line);margin-top:3.5rem;padding:1.4rem 0 2.4rem;color:var(--dim);font-size:.85rem}
+  .pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:.15rem .7rem;color:var(--dim);font-size:.8rem;margin-right:.4rem}
+  @media(max-width:640px){.term-body{font-size:.78rem}.hero{padding:2.8rem 0 2rem}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="brand"><span class="shield">🛡️</span> phishguard<span style="color:var(--dim)">@github:~$</span></div>
+    <nav>
+      <a href="#features">features</a>
+      <a href="#quickstart">quickstart</a>
+      <a href="#safety">safety</a>
+      <a href="https://github.com/MANYMITE/phishguard" target="_blank" rel="noopener">github ↗</a>
+    </nav>
+  </div>
+</header>
+
+<div class="hero wrap">
+  <div class="term">
+    <div class="term-bar"><i></i><i></i><i></i></div>
+    <div class="term-body"><span class="d">$</span> <span class="g">phishguard-cli</span>
+
+  <span class="g">  ____  _   _ ____   ____ _   _    _</span>
+  <span class="g"> |  _ \| | | |  _ \ / ___| | | |  / \</span>
+  <span class="g"> | |_) | | | | |_) | |   | |_| | / _ \</span>
+  <span class="g"> |  __/| |_| |  __/| |___|  _  |/ ___ \</span>
+  <span class="g"> |_|    \___/|_|    \____|_| |_/_/   \_\</span>
+  <span class="d">        consent-based awareness training</span>
+
+<span class="g">┌─[ PhishGuard ]─[ main menu ]</span>
+   <span class="g">[01]</span> Quick drill (pick → link)   <span class="g">[06]</span> Campaign stats+links
+   <span class="g">[02]</span> New campaign                <span class="g">[07]</span> Open web panel
+   <span class="g">[03]</span> Add participant             <span class="g">[08]</span> Start / stop local server
+   <span class="g">[04]</span> List campaigns              <span class="g">[09]</span> Share on the network (tunnel)
+   <span class="g">[05]</span> Template catalog            <span class="g">[10]</span> Run safety verification
+   <span class="r">[00]</span> Exit
+
+<span class="g">┌─[ Choose an option: ]─[~]</span>
+<span class="g">└──────────►</span> <span class="c">█</span></div>
+  </div>
+  <h1 style="font-size:1.6rem;margin:2rem 0 .6rem">Run phishing drills on people who said yes.<br><span style="color:var(--green)">Store zero credentials. Ever.</span></h1>
+  <p style="color:var(--dim);max-width:44rem">PhishGuard is a free, open-source phishing-<b>awareness</b> platform: realistic
+  fake portals, personal unguessable links, live click/submit stats, an instant
+  teaching page — and a database that <b>cannot hold a password</b>, enforced by the
+  test suite itself.</p>
+  <p>
+    <a class="pill" href="https://github.com/MANYMITE/phishguard">source</a>
+    <a class="pill" href="https://github.com/MANYMITE/phishguard#readme">docs</a>
+    <span class="pill">50 tests ✓</span><span class="pill">MIT</span><span class="pill">Python 3 + Flask</span>
+  </p>
+</div>
+
+<div class="wrap">
+  <h2> why phishguard</h2>
+  <p>Credential-harvesting toolkits (BlackEye &amp; friends) ship the mechanics with
+  none of the guardrails — you can't put them on a résumé, and you can't legally
+  run them on real people. PhishGuard keeps the <b>training value</b> and hard-codes
+  the ethics into the source:</p>
+  <div class="grid">
+    <div class="card"><b>🚫 zero-credential storage</b><p>The submission handler never reads the password field. Tests post a canary password and byte-scan the DB file to prove it never touched disk.</p></div>
+    <div class="card"><b>✅ consent gates</b><p>Campaigns and participants require explicit consent, re-validated twice — route and database layer.</p></div>
+    <div class="card"><b>🔗 unguessable links</b><p>Every participant gets a personal random token. A forged token looks exactly like a missing page.</p></div>
+    <div class="card"><b>🎭 10 fictional portals</b><p>Webmail, VPN, banking, payroll, health, airline and more — themed, clone-of-nothing, always with an honest banner.</p></div>
+    <div class="card"><b>🖥️ hacker-console UI</b><p>ASCII banner, numbered menu, template grid — the terminal experience, driving a legitimate product.</p></div>
+    <div class="card"><b>🌍 any network</b><p>LAN mode plus one-command tunnels (Cloudflare / Pinggy / ngrok / localtunnel). Links auto-carry the public host.</p></div>
+  </div>
+
+  <h2> quickstart</h2>
+  <ol class="steps">
+    <li><b>Get it</b> — <code>git clone https://github.com/MANYMITE/phishguard.git &amp;&amp; cd phishguard</code></li>
+    <li><b>Set up</b> — <code>./install.sh</code> <span style="color:var(--dim)">(or: python3 -m venv .venv; pip install -r requirements.txt)</span></li>
+    <li><b>Activate</b> — <code>. .venv/bin/activate</code></li>
+    <li><b>Set your admin password</b> — <code>export PHISHGUARD_SECRET_KEY="pick-a-long-random-string"</code></li>
+    <li><b>Verify</b> — <code>bash scripts/verify.sh</code> <span style="color:var(--dim)">(13 automated end-to-end checks)</span></li>
+    <li><b>Run</b> — <code>python run.py</code> <span style="color:var(--dim)">→ web panel at http://127.0.0.1:5000</span> — or <code>python phishguard-cli.py</code> for the terminal UI</li>
+  </ol>
+  <pre class="code"><span class="d"># the whole drill in one line, terminal style:</span>
+python phishguard-cli.py   <span class="d"># → [01] quick drill → pick portal → consent → link</span></pre>
+
+  <h2> safety model</h2>
+  <div class="banner">⚠️ PhishGuard is for <b>authorised awareness training only</b>: simulations
+  delivered to people in your organisation who consented, on systems you own.
+  Using it — or any tool — to phish real credentials from unconsenting people is
+  illegal in most jurisdictions.</div>
+  <div class="grid">
+    <div class="card"><b>Honest pages</b><p>Every simulation shows an unremovable banner: “training exercise — nothing you type is saved.”</p></div>
+    <div class="card"><b>Teaching moment</b><p>Submitters land on an education page — check senders, hover links, refuse urgency, go direct, report.</p></div>
+    <div class="card"><b>Privacy by design</b><p>Stored data: names, work emails, event counts, hashed user agent. Delete the SQLite file and everything is gone.</p></div>
+  </div>
+
+  <h2> get started</h2>
+  <p>Clone the repo, run the self-test, run your first drill in under five minutes.<br>
+  <a href="https://github.com/MANYMITE/phishguard" target="_blank" rel="noopener">→ github.com/MANYMITE/phishguard</a></p>
+</div>
+
+<footer>
+  <div class="wrap">
+    PhishGuard — consent-based phishing awareness training · MIT license ·
+    built with Python 3 + Flask + SQLite<br>
+    This site is served by GitHub Pages from the project repository.
+  </div>
+</footer>
+
+</body>
+</html>
