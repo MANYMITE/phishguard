@@ -26,7 +26,16 @@ echo "TUNNEL_URL=$URL"
 sleep 3
 
 JAR=$(mktemp)
-G() { curl -s --max-time 25 -b "$JAR" -c "$JAR" "$@"; }
+# Retry up to 3x: the first request through a fresh tunnel often times out.
+G() {
+  local out="" i=0
+  while [ $i -lt 3 ]; do
+    out=$(curl -s --max-time 25 -b "$JAR" -c "$JAR" "$@")
+    [ -n "$out" ] && break
+    i=$((i+1)); sleep 1
+  done
+  printf '%s' "$out"
+}
 T() { G "$1" | grep -oE 'name="csrf_token" value="[^"]+"' | head -1 | sed 's/.*value="//;s/"//'; }
 PASS=0; FAIL=0
 ok()  { PASS=$((PASS+1)); echo "  ✔ $1"; }
@@ -45,17 +54,24 @@ G "$URL/login" | grep -q "Wrong admin password" && ok "wrong password rejected" 
 T2=$(T "$URL/")
 [ -n "$T2" ] && ok "fresh CSRF token" || bad "fresh CSRF token"
 G -o /dev/null -X POST "$URL/campaigns" -d "name=Tunnel+proof&template_key=acme_webmail&consent=yes&csrf_token=$T2"
-G "$URL/campaigns/1" | grep -q "created" && ok "campaign created" || bad "campaign created"
-G -o /dev/null -X POST "$URL/campaigns/1/participants" -d "name=Remote&email=remote@example.com&consent=yes&csrf_token=$T2"
-LINK=$(G "$URL/campaigns/1" | grep -oE "$URL/sim/1/[0-9]+-[A-Za-z0-9_-]+" | head -1)
+# Campaign id depends on whether earlier test data survived; detect it.
+CID=""
+for id in 1 2 3 4 5; do
+  if G "$URL/campaigns/$id" | grep -q "Tunnel proof"; then CID=$id; break; fi
+done
+[ -n "$CID" ] && ok "campaign created (#$CID)" || bad "campaign created"
+G -o /dev/null -X POST "$URL/campaigns/$CID/participants" -d "name=Remote&email=remote@example.com&consent=yes&csrf_token=$T2"
+PAGE=$(G "$URL/campaigns/$CID")
+LINK=$(echo "$PAGE" | grep -oE "$URL/sim/$CID/[0-9]+-[A-Za-z0-9_-]+" | head -1)
 [ -n "$LINK" ] && ok "participant link carries public host" || bad "participant link missing"
 
-[ "$(curl -s --max-time 25 -o /dev/null -w '%{http_code}' "$URL/sim/1/1-forged")" = "404" ] \
+PID_NUM=$(echo "$LINK" | grep -oE "[0-9]+" | head -1)
+[ "$(curl -s --max-time 25 -o /dev/null -w '%{http_code}' "$URL/sim/$CID/$PID_NUM-forged")" = "404" ] \
   && ok "forged token 404 via public url" || bad "forged token 404 via public url"
-curl -s --max-time 25 "$LINK" | grep -q "Training exercise" && ok "honest banner via public url" || bad "honest banner missing"
-LOC=$(curl -s --max-time 25 -o /dev/null -w '%{redirect_url}' -X POST "$LINK" -d "username=remote@example.com&password=PROOF-CANARY-1")
-curl -s --max-time 25 "$LOC" | grep -q "that was the drill" && ok "caught page via public url" || bad "caught page broken"
-G "$URL/campaigns/1" | grep -q "submitted the form" && ok "stats via public url" || bad "stats missing"
+G "$LINK" | grep -q "Training exercise" && ok "honest banner via public url" || bad "honest banner missing"
+LOC=$(G -o /dev/null -w '%{redirect_url}' -X POST "$LINK" -d "username=remote@example.com&password=PROOF-CANARY-1")
+G "$LOC" | grep -q "that was the drill" && ok "caught page via public url" || bad "caught page broken"
+G "$URL/campaigns/$CID" | grep -q "submitted the form" && ok "stats via public url" || bad "stats missing"
 
 if grep -q "PROOF-CANARY-1" phishguard.db 2>/dev/null; then
   bad "canary stored (invariant broken!)"
