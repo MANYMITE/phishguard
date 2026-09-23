@@ -27,15 +27,18 @@ sleep 3
 
 JAR=$(mktemp)
 # Retry up to 3x: the first request through a fresh tunnel often times out.
+# Guard: never pass empty positional args to curl (blank-argument cascade).
 G() {
   local out="" i=0
   while [ $i -lt 3 ]; do
-    out=$(curl -s --max-time 25 -b "$JAR" -c "$JAR" "$@")
+    out=$(curl -s --max-time 25 -b "$JAR" -c "$JAR" "$@" 2>/dev/null)
     [ -n "$out" ] && break
     i=$((i+1)); sleep 1
   done
   printf '%s' "$out"
 }
+# Follow-up request that needs a non-empty target (e.g. a redirect URL).
+G2() { [ -n "${2:-}" ] || return 0; G "$@"; }
 T() { G "$1" | grep -oE 'name="csrf_token" value="[^"]+"' | head -1 | sed 's/.*value="//;s/"//'; }
 PASS=0; FAIL=0
 ok()  { PASS=$((PASS+1)); echo "  ✔ $1"; }
@@ -70,7 +73,7 @@ PID_NUM=$(echo "$LINK" | grep -oE "[0-9]+" | head -1)
   && ok "forged token 404 via public url" || bad "forged token 404 via public url"
 G "$LINK" | grep -q "Training exercise" && ok "honest banner via public url" || bad "honest banner missing"
 LOC=$(G -o /dev/null -w '%{redirect_url}' -X POST "$LINK" -d "username=remote@example.com&password=PROOF-CANARY-1")
-G "$LOC" | grep -q "that was the drill" && ok "caught page via public url" || bad "caught page broken"
+G2 "$LOC" | grep -q "that was the drill" && ok "caught page via public url" || bad "caught page broken"
 G "$URL/campaigns/$CID" | grep -q "submitted the form" && ok "stats via public url" || bad "stats missing"
 
 if grep -q "PROOF-CANARY-1" phishguard.db 2>/dev/null; then
