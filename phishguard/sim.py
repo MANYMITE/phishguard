@@ -1,5 +1,9 @@
 """Simulation blueprint: the participant-facing side of a campaign.
 
+Every simulation route requires the participant's personal random token,
+so links cannot be guessed or enumerated — important because these pages
+are meant to be *delivered* to a specific person, not discovered.
+
 The heart of PhishGuard's safety model lives in `submit()`:
 
 * The handler never reads the password field. Flask parses the form, the
@@ -18,34 +22,41 @@ sim_bp = Blueprint("sim", __name__, url_prefix="/sim")
 
 
 # Simulation templates. Keys are stable identifiers used by campaigns.
-# A template is (title, description, template filename, next_step_name).
 TEMPLATES: dict[str, dict] = {
     "acme_webmail": {
         "title": "Acme Webmail",
         "description": "A generic corporate webmail portal.",
         "file": "sim_acme_webmail.html",
-        "next_step": "webmail_inbox",
     },
 }
 
 
-@sim_bp.get("/<int:campaign_id>/<int:participant_id>")
-def landing(campaign_id: int, participant_id: int):
+def _load(campaign_id: int, participant_id: int, sim_token: str):
+    """Resolve campaign/participant/template, enforcing the personal token."""
     c = db.get_campaign(campaign_id)
     p = db.get_participant(participant_id, campaign_id)
     if c is None or p is None:
         abort(404)
+    if not sim_token or not p["sim_token"] or sim_token != p["sim_token"]:
+        # Wrong or missing token: behave exactly like "does not exist".
+        abort(404)
     template = TEMPLATES.get(c["template_key"])
     if template is None:
         abort(404)
+    return c, p, template
+
+
+@sim_bp.get("/<int:campaign_id>/<int:participant_id>-<sim_token>")
+def landing(campaign_id: int, participant_id: int, sim_token: str):
+    c, p, template = _load(campaign_id, participant_id, sim_token)
     db.record_event(participant_id, campaign_id, "clicked",
                     user_agent=_ua_hash())
     return render_template(template["file"], campaign=c, participant=p,
                            template=template)
 
 
-@sim_bp.post("/<int:campaign_id>/<int:participant_id>")
-def submit(campaign_id: int, participant_id: int):
+@sim_bp.post("/<int:campaign_id>/<int:participant_id>-<sim_token>")
+def submit(campaign_id: int, participant_id: int, sim_token: str):
     """Receive a simulated submission.
 
     SAFETY: `request.form` may contain a password. We deliberately do NOT
@@ -54,13 +65,7 @@ def submit(campaign_id: int, participant_id: int):
     be recorded — and today the schema stores nothing beyond event type,
     timestamp and a user-agent hash.
     """
-    c = db.get_campaign(campaign_id)
-    p = db.get_participant(participant_id, campaign_id)
-    if c is None or p is None:
-        abort(404)
-    template = TEMPLATES.get(c["template_key"])
-    if template is None:
-        abort(404)
+    c, p, template = _load(campaign_id, participant_id, sim_token)
 
     # request.form (including any credentials) is discarded here — nothing
     # from it is stored, logged or returned.
@@ -68,16 +73,13 @@ def submit(campaign_id: int, participant_id: int):
     db.record_event(participant_id, campaign_id, "submitted",
                     user_agent=_ua_hash())
     return redirect(url_for("sim.caught", campaign_id=campaign_id,
-                            participant_id=participant_id))
+                            participant_id=participant_id,
+                            sim_token=sim_token))
 
 
-@sim_bp.get("/<int:campaign_id>/<int:participant_id>/caught")
-def caught(campaign_id: int, participant_id: int):
-    c = db.get_campaign(campaign_id)
-    p = db.get_participant(participant_id, campaign_id)
-    if c is None or p is None:
-        abort(404)
-    template = TEMPLATES.get(c["template_key"])
+@sim_bp.get("/<int:campaign_id>/<int:participant_id>-<sim_token>/caught")
+def caught(campaign_id: int, participant_id: int, sim_token: str):
+    c, p, template = _load(campaign_id, participant_id, sim_token)
     return render_template("caught.html", campaign=c, participant=p,
                            template=template)
 

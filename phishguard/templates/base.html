@@ -8,9 +8,11 @@
     :root { --ink:#16202b; --muted:#5b6b7b; --line:#dfe6ee; --brand:#0b6bcb; --ok:#0a7d43; --warn:#b3541e; }
     * { box-sizing:border-box; }
     body { margin:0; font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; color:var(--ink); background:#f4f7fa; }
-    header { background:var(--ink); color:#fff; padding:0.9rem 1.2rem; display:flex; gap:.75rem; align-items:baseline; }
+    header { background:var(--ink); color:#fff; padding:0.9rem 1.2rem; display:flex; gap:.75rem; align-items:baseline; flex-wrap:wrap; }
     header a { color:#9ecbff; font-size:.95rem; text-decoration:none; }
     header .brand { font-weight:700; letter-spacing:.3px; }
+    header form { margin-left:auto; }
+    header button { background:#26374a; font-size:.85rem; padding:.3rem .8rem; }
     main { max-width:980px; margin:1.5rem auto 4rem; padding:0 1rem; }
     h1 { font-size:1.4rem; margin:0.2rem 0 1rem; }
     h2 { font-size:1.05rem; margin:1.6rem 0 .5rem; }
@@ -24,7 +26,7 @@
     .stat b { display:block; font-size:1.6rem; }
     .stat span { color:var(--muted); font-size:.85rem; }
     label { display:block; margin:.6rem 0 .2rem; font-weight:600; font-size:.95rem; }
-    input[type=text], input[type=email], select { width:100%; padding:.5rem .6rem; border:1px solid var(--line); border-radius:8px; font:inherit; }
+    input[type=text], input[type=email], input[type=password], select { width:100%; padding:.5rem .6rem; border:1px solid var(--line); border-radius:8px; font:inherit; }
     .check { display:flex; gap:.5rem; align-items:flex-start; margin:.8rem 0; font-weight:400; }
     .check input { margin-top:.25rem; }
     button { background:var(--brand); color:#fff; border:0; border-radius:8px; padding:.55rem 1.1rem; font:inherit; cursor:pointer; }
@@ -35,6 +37,8 @@
     code, .mono { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:.85rem; background:#eef3f8; padding:.15rem .35rem; border-radius:5px; word-break:break-all; }
     .muted { color:var(--muted); font-size:.9rem; }
     .pill { display:inline-block; padding:.1rem .55rem; border-radius:999px; font-size:.8rem; background:#eef3f8; color:var(--muted); }
+    .copy-btn { background:#eef3f8; color:var(--ink); border:1px solid var(--line); font-size:.8rem; padding:.2rem .6rem; margin-left:.4rem; }
+    details.event-log summary { cursor:pointer; color:var(--muted); }
   </style>
 </head>
 <body>
@@ -42,6 +46,12 @@
     <span class="brand">🛡️ PhishGuard</span>
     <a href="{{ url_for('admin.dashboard') }}">Dashboard</a>
     <span class="muted" style="color:#8fa3b8">consent-based awareness training</span>
+    {% if admin_signed_in %}
+      <form method="post" action="{{ url_for('admin.logout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit">Sign out</button>
+      </form>
+    {% endif %}
   </header>
   <main>
     {% with messages = get_flashed_messages(with_categories=true) %}

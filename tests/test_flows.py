@@ -5,6 +5,8 @@ import unittest
 
 from phishguard import create_app
 
+ADMIN_PASSWORD = "dev-only-change-me"  # default dev secret doubles as password
+
 
 class Base(unittest.TestCase):
     def setUp(self):
@@ -14,16 +16,36 @@ class Base(unittest.TestCase):
             "TESTING": True,
         })
         self.client = self.app.test_client()
-        with self.app.app_context():
-            from phishguard import db
-            db.init_app(self.app)  # idempotent
 
     def tearDown(self):
         self.tmp.cleanup()
 
+    # -- helpers ----------------------------------------------------------
+    def login(self):
+        return self.client.post("/login",
+                                data={"password": ADMIN_PASSWORD},
+                                follow_redirects=True)
+
+    def make_campaign_and_participant(self, email="amy@example.com",
+                                      name="Amy"):
+        with self.app.app_context():
+            from phishguard import db
+            cid = db.create_campaign("Drill", "acme_webmail", consent=True)
+            pid = db.create_participant(cid, name, email, consent=True)
+        return cid, pid
+
+    def sim_path(self, cid, pid, token=None):
+        """Tokenized path for a participant (token fetched from DB by default)."""
+        with self.app.app_context():
+            from phishguard import db
+            if token is None:
+                token = db.get_participant(pid, cid)["sim_token"]
+        return f"/sim/{cid}/{pid}-{token}"
+
 
 class ConsentGates(Base):
     def test_campaign_requires_consent(self):
+        self.login()
         resp = self.client.post("/campaigns", data={
             "name": "No-consent campaign",
             "template_key": "acme_webmail",
@@ -35,6 +57,7 @@ class ConsentGates(Base):
             self.assertEqual(len(db.list_campaigns()), 0)
 
     def test_campaign_with_consent_is_created(self):
+        self.login()
         resp = self.client.post("/campaigns", data={
             "name": "Q1 drill",
             "template_key": "acme_webmail",
@@ -48,47 +71,51 @@ class ConsentGates(Base):
             self.assertEqual(campaigns[0]["consent_confirmed"], 1)
 
     def test_participant_requires_consent(self):
-        with self.app.app_context():
-            from phishguard import db
-            cid = db.create_campaign("C", "acme_webmail", consent=True)
+        self.login()
+        cid, _ = self.make_campaign_and_participant()
         resp = self.client.post(f"/campaigns/{cid}/participants", data={
             "name": "Rory", "email": "rory@example.com",  # no consent
         }, follow_redirects=True)
         self.assertIn(b"consented", resp.data)
         with self.app.app_context():
             from phishguard import db
-            self.assertEqual(len(db.list_participants(cid)), 0)
+            emails = [p["email"] for p in db.list_participants(cid)]
+        self.assertNotIn("rory@example.com", emails)  # nothing was added
+
+    def test_db_layer_refuses_unconsented_creation(self):
+        """The DB layer is the second line of defence — test it directly."""
+        with self.app.app_context():
+            from phishguard import db
+            with self.assertRaises(ValueError):
+                db.create_campaign("Sneaky", "acme_webmail", consent=False)
+            with self.assertRaises(ValueError):
+                db.create_participant(1, "X", "x@x.com", consent=False)
 
 
 class SimulationLifecycle(Base):
-    def make_campaign_and_participant(self):
-        with self.app.app_context():
-            from phishguard import db
-            cid = db.create_campaign("Drill", "acme_webmail", consent=True)
-            pid = db.create_participant(cid, "Amy", "amy@example.com", consent=True)
-        return cid, pid
-
     def test_landing_clicks_and_submit_redirects_to_caught(self):
         cid, pid = self.make_campaign_and_participant()
-        resp = self.client.get(f"/sim/{cid}/{pid}")
+        path = self.sim_path(cid, pid)
+        resp = self.client.get(path)
         self.assertEqual(resp.status_code, 200)
         self.assertIn(b"Acme Webmail", resp.data)
         self.assertIn(b"Training exercise", resp.data)  # honest banner
 
-        resp = self.client.post(f"/sim/{cid}/{pid}", data={
+        resp = self.client.post(path, data={
             "username": "amy@example.com", "password": "whatever",
         })
         self.assertEqual(resp.status_code, 302)
         self.assertIn("/caught", resp.headers["Location"])
 
-        resp = self.client.get(f"/sim/{cid}/{pid}/caught")
+        resp = self.client.get(resp.headers["Location"])
         self.assertIn(b"that was the drill", resp.data)
         self.assertIn(b"Nothing you typed was saved", resp.data)
 
     def test_stats_track_clicks_and_submissions(self):
         cid, pid = self.make_campaign_and_participant()
-        self.client.get(f"/sim/{cid}/{pid}")
-        self.client.post(f"/sim/{cid}/{pid}", data={"username": "a", "password": "b"})
+        path = self.sim_path(cid, pid)
+        self.client.get(path)
+        self.client.post(path, data={"username": "a", "password": "b"})
         with self.app.app_context():
             from phishguard import db
             stats = db.campaign_stats(cid)
@@ -99,13 +126,23 @@ class SimulationLifecycle(Base):
             self.assertEqual(stats["submit_rate"], 100.0)
 
     def test_unknown_participant_is_404(self):
-        resp = self.client.get("/sim/999/999")
-        self.assertEqual(resp.status_code, 404)
+        self.assertEqual(self.client.get("/sim/999/999-abc").status_code, 404)
 
-    def test_dashboard_renders(self):
+    def test_dashboard_requires_login_and_renders_after(self):
+        resp = self.client.get("/")
+        self.assertEqual(resp.status_code, 302)  # redirected to /login
+        self.login()
         resp = self.client.get("/")
         self.assertEqual(resp.status_code, 200)
         self.assertIn(b"PhishGuard", resp.data)
+        self.assertIn(b"passwords stored", resp.data)
+
+    def test_global_stats_on_dashboard(self):
+        self.login()
+        cid, pid = self.make_campaign_and_participant()
+        self.client.get(self.sim_path(cid, pid))
+        resp = self.client.get("/")
+        self.assertIn(b"campaigns</span>", resp.data)
 
     def test_health(self):
         resp = self.client.get("/health")

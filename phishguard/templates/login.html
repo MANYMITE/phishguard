@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Sign in — PhishGuard{% endblock %}
+{% block content %}
+  <div class="card" style="max-width:420px;margin:8vh auto;">
+    <h1 style="margin-top:0">Trainer sign-in</h1>
+    <p class="muted">PhishGuard is a consent-based training tool. Campaigns,
+    participants and results live behind this login.</p>
+    <form method="post" action="{{ url_for('admin.login') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label for="password">Admin password</label>
+      <input type="password" id="password" name="password" required autofocus>
+      <button type="submit" style="margin-top:1rem">Sign in</button>
+    </form>
+    <p class="muted" style="margin-bottom:0">Set it via the
+      <code>PHISHGUARD_SECRET_KEY</code> environment variable — it doubles as
+      the admin password in this release.</p>
+  </div>
+{% endblock %}

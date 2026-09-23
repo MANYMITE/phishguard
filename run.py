@@ -2,6 +2,7 @@
 import os
 
 from phishguard import create_app
+from phishguard import db
 
 app = create_app()
 
@@ -16,6 +17,7 @@ def _port(default: int = 5000) -> int:
 
 
 if __name__ == "__main__":
+    db.configure_audit_logging()  # file trail for real runs; tests skip it
     # Bind to localhost by default. If you expose this beyond your machine,
-    # put it behind real authentication first (see README roadmap).
+    # put it behind a real WSGI server + reverse proxy first (see README).
     app.run(host="127.0.0.1", port=_port())

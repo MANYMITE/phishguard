@@ -3,11 +3,21 @@
 {% block content %}
   <h1>Campaigns</h1>
 
+  <div class="stats" style="margin-bottom:1rem;">
+    <div class="stat"><b>{{ gstats.campaigns }}</b><span>campaigns</span></div>
+    <div class="stat"><b>{{ gstats.participants }}</b><span>participants (all consented)</span></div>
+    <div class="stat"><b>{{ gstats.clicks }}</b><span>opened a simulation</span></div>
+    <div class="stat"><b>{{ gstats.submissions }}</b><span>submitted the form</span></div>
+    <div class="stat"><b>0</b><span>passwords stored — ever</span></div>
+  </div>
+
   <div class="card">
     <h2 style="margin-top:0">New campaign</h2>
     <form method="post" action="{{ url_for('admin.create_campaign') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label for="name">Campaign name</label>
-      <input type="text" id="name" name="name" placeholder="e.g. Q4 finance-team drill" required>
+      <input type="text" id="name" name="name" maxlength="80"
+             placeholder="e.g. Q4 finance-team drill" required>
 
       <label for="template_key">Simulation template</label>
       <select id="template_key" name="template_key">
@@ -30,7 +40,7 @@
 
   {% if campaigns %}
     <table>
-      <tr><th>#</th><th>Name</th><th>Template</th><th>Participants</th><th>Clicks</th><th>Submissions</th><th></th></tr>
+      <tr><th>#</th><th>Name</th><th>Template</th><th>People</th><th>Opened</th><th>Submitted</th><th></th></tr>
       {% for row in campaigns %}
         <tr>
           <td>{{ row.campaign["id"] }}</td>
@@ -52,11 +62,13 @@
     <ol>
       <li>Create a campaign and tick the consent box.</li>
       <li>Add each consenting participant by name + email.</li>
-      <li>Copy each participant's unique simulation link and send it to them.</li>
+      <li>Copy each participant's <b>personal, unguessable link</b> and send it
+          to them however you agreed (email, chat).</li>
       <li>Watch clicks/submissions land here, then walk each person through
           their personal <i>“you were caught”</i> teaching page.</li>
     </ol>
-    <p class="muted">V1 is deliberately manual — you are the sending engine. SMTP
-    delivery arrives on the roadmap once consent logging is mature.</p>
+    <p class="muted">Links contain a random token, so they can't be guessed or
+    enumerated — a wrong token looks exactly like a missing page. V1 delivery
+    is deliberately manual; consent-logged SMTP sending is on the roadmap.</p>
   </div>
 {% endblock %}

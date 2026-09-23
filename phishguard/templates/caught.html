@@ -6,7 +6,8 @@
   <title>Good catch — that was the drill 🎣</title>
   <style>
     body { margin:0; font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; background:#f4f7fa; color:#16202b; }
-    .wrap { max-width:640px; margin:10vh auto; padding:0 1rem; }
+    .banner { background:#0a7d43; color:#fff; text-align:center; padding:.5rem 1rem; font-size:.9rem; }
+    .wrap { max-width:640px; margin:6vh auto 8vh; padding:0 1rem; }
     .card { background:#fff; border:1px solid #dfe6ee; border-radius:12px; padding:2rem; }
     h1 { font-size:1.5rem; margin-top:0; }
     .badge { display:inline-block; background:#e5f5ec; color:#0a7d43; border:1px solid #bfe5cf; border-radius:999px; padding:.25rem .8rem; font-weight:600; font-size:.9rem; }
@@ -16,14 +17,16 @@
   </style>
 </head>
 <body>
+  <div class="banner">🛡️ This was an authorised awareness-training exercise —
+  nothing you typed was saved.</div>
+
   <div class="wrap">
     <div class="card">
       <span class="badge">✅ Simulation complete</span>
       <h1>Good catch, {{ participant["name"] }} — that was the drill.</h1>
 
-      <p>The “Acme Webmail” page you just signed in on was a <b>training
-      exercise</b> run with your consent as part of campaign
-      <i>{{ campaign["name"] }}</i>.</p>
+      <p>The page you just signed in on was a <b>training exercise</b> run with
+      your consent as part of campaign <i>{{ campaign["name"] }}</i>.</p>
 
       <div class="note">
         <b>Nothing you typed was saved.</b> The server threw your credentials

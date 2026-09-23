@@ -16,10 +16,11 @@
   <h2>Add participant</h2>
   <div class="card">
     <form method="post" action="{{ url_for('admin.add_participant', campaign_id=campaign['id']) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label for="p-name">Name</label>
-      <input type="text" id="p-name" name="name" required>
+      <input type="text" id="p-name" name="name" maxlength="80" required>
       <label for="p-email">Email</label>
-      <input type="email" id="p-email" name="email" required>
+      <input type="email" id="p-email" name="email" maxlength="254" required>
       <label class="check">
         <input type="checkbox" name="consent" value="yes">
         <span>This person has agreed to take part in this training exercise.</span>
@@ -28,38 +29,56 @@
     </form>
   </div>
 
-  <h2>Participants &amp; simulation links</h2>
+  <h2>Participants &amp; personal links</h2>
   {% if participants %}
     <table>
-      <tr><th>#</th><th>Name</th><th>Email</th><th>Unique simulation link</th></tr>
+      <tr><th>#</th><th>Name</th><th>Email</th><th>Personal simulation link</th></tr>
       {% for p in participants %}
         <tr>
           <td>{{ p["id"] }}</td>
           <td>{{ p["name"] }}</td>
           <td>{{ p["email"] }}</td>
-          <td><code>{{ links[p["id"]] }}</code></td>
+          <td>
+            <code class="sim-link">{{ links[p["id"]] }}</code>
+            <button type="button" class="copy-btn"
+                    data-copy="{{ links[p["id"]] }}">copy</button>
+          </td>
         </tr>
       {% endfor %}
     </table>
-    <p class="muted">Each link is personal to one participant. Deliver it yourself
-    (email/chat) as part of the agreed drill.</p>
+    <p class="muted">Each link is personal (it contains a private token) and
+    unguessable. Deliver it yourself as part of the agreed drill.</p>
   {% else %}
     <p class="muted">No participants yet.</p>
   {% endif %}
 
-  <h2>Activity</h2>
-  {% if events %}
-    <table>
-      <tr><th>When</th><th>Who</th><th>Event</th></tr>
-      {% for e in events %}
-        <tr>
-          <td class="mono">{{ e["created_at"] }}</td>
-          <td>{{ e["name"] }} &lt;{{ e["email"] }}&gt;</td>
-          <td>{{ e["event_type"] }}</td>
-        </tr>
-      {% endfor %}
-    </table>
-  {% else %}
-    <p class="muted">Nothing yet — links haven't been visited.</p>
-  {% endif %}
+  <details class="event-log" {% if events %}open{% endif %}>
+    <summary>Activity log ({{ events|length }} events)</summary>
+    {% if events %}
+      <table>
+        <tr><th>When</th><th>Who</th><th>Event</th></tr>
+        {% for e in events %}
+          <tr>
+            <td class="mono">{{ e["created_at"] }}</td>
+            <td>{{ e["name"] }} &lt;{{ e["email"] }}&gt;</td>
+            <td>{{ e["event_type"] }}</td>
+          </tr>
+        {% endfor %}
+      </table>
+    {% else %}
+      <p class="muted">Nothing yet — links haven't been visited.</p>
+    {% endif %}
+  </details>
+
+  <script>
+    document.querySelectorAll(".copy-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var text = btn.getAttribute("data-copy");
+        if (navigator.clipboard) { navigator.clipboard.writeText(text); }
+        var old = btn.textContent;
+        btn.textContent = "copied ✓";
+        setTimeout(function () { btn.textContent = old; }, 1200);
+      });
+    });
+  </script>
 {% endblock %}

@@ -4,9 +4,13 @@ Schema philosophy: events are the ONLY thing recorded about participants'
 behaviour, and they carry no free-form payload — see safety.py for the
 storage-level guard that enforces this.
 """
+import logging
+import secrets
 import sqlite3
 
 from flask import current_app, g
+
+from .safety import ValidationError
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS campaigns (
@@ -23,7 +27,18 @@ CREATE TABLE IF NOT EXISTS participants (
     name              TEXT NOT NULL,
     email             TEXT NOT NULL,
     consent_confirmed INTEGER NOT NULL DEFAULT 0 CHECK (consent_confirmed IN (0, 1)),
-    created_at        TEXT NOT NULL DEFAULT (datetime('now'))
+    sim_token         TEXT NOT NULL,
+    created_at        TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (campaign_id, email),
+    UNIQUE (sim_token)
+);
+
+CREATE TABLE IF NOT EXISTS audit_log (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    actor      TEXT NOT NULL,
+    action     TEXT NOT NULL,
+    detail     TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS events (
@@ -39,6 +54,26 @@ CREATE INDEX IF NOT EXISTS idx_events_campaign ON events(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_participants_campaign ON participants(campaign_id);
 """
 
+# File-based audit trail for real deployments (see configure_audit_logging).
+# Tests run without it; the logger then simply has no handlers attached.
+_audit_logger = logging.getLogger("phishguard.audit")
+
+
+def configure_audit_logging() -> None:
+    """Route audit events into audit.log (idempotent)."""
+    if _audit_logger.handlers:
+        return
+    handler = logging.FileHandler("audit.log")
+    handler.setFormatter(logging.Formatter("%(asctime)s %(message)s"))
+    _audit_logger.setLevel(logging.INFO)
+    _audit_logger.addHandler(handler)
+    _audit_logger.propagate = False
+
+
+def audit(action: str, detail: str = "") -> None:
+    """Append one structured, secret-free line to the audit trail."""
+    _audit_logger.info("action=%s %s", action, detail)
+
 
 def get_db() -> sqlite3.Connection:
     if "db" not in g:
@@ -47,6 +82,10 @@ def get_db() -> sqlite3.Connection:
         )
         g.db.row_factory = sqlite3.Row
         g.db.execute("PRAGMA foreign_keys = ON")
+        # A file-backed DB is initialised once in init_app(); an in-memory
+        # DB is per-connection, so it needs the schema every time.
+        if current_app.config["DATABASE"] == ":memory:":
+            g.db.executescript(SCHEMA)
     return g.db
 
 
@@ -59,19 +98,22 @@ def close_db(_exc=None) -> None:
 def init_app(app) -> None:
     app.config.setdefault("DATABASE", "phishguard.db")
     app.teardown_appcontext(close_db)
-    with app.app_context():
-        conn = sqlite3.connect(app.config["DATABASE"])
+    conn = sqlite3.connect(app.config["DATABASE"])
+    try:
         conn.executescript(SCHEMA)
         conn.commit()
-        conn.close()
+    finally:
+        conn.close()  # never leak the file handle (breaks tmpdir cleanup on Windows)
 
 
 # ---------------------------------------------------------------------------
 # Queries
 # ---------------------------------------------------------------------------
 
-def create_campaign(name: str, template_key: str, consent: bool) -> int:
-    if not consent:
+def create_campaign(name: str, template_key: str, consent: bool,
+                    actor: str = "admin") -> int:
+    """Create a campaign. Consent is mandatory — refusing is a hard error."""
+    if consent is not True:
         raise ValueError("Campaign creation requires explicit consent confirmation.")
     conn = get_db()
     cur = conn.execute(
@@ -79,6 +121,7 @@ def create_campaign(name: str, template_key: str, consent: bool) -> int:
         (name, template_key),
     )
     conn.commit()
+    audit("campaign_created", f"id={cur.lastrowid} template={template_key} actor={actor}")
     return int(cur.lastrowid)
 
 
@@ -94,16 +137,28 @@ def get_campaign(campaign_id: int) -> sqlite3.Row | None:
     ).fetchone()
 
 
-def create_participant(campaign_id: int, name: str, email: str, consent: bool) -> int:
-    if not consent:
+def create_participant(campaign_id: int, name: str, email: str,
+                       consent: bool, actor: str = "admin") -> int:
+    """Add a participant. Duplicate email within a campaign is rejected."""
+    if consent is not True:
         raise ValueError("Participant creation requires explicit consent confirmation.")
+    sim_token = secrets.token_urlsafe(32)  # personal, unguessable link token
     conn = get_db()
-    cur = conn.execute(
-        "INSERT INTO participants (campaign_id, name, email, consent_confirmed)"
-        " VALUES (?, ?, ?, 1)",
-        (campaign_id, name, email),
-    )
-    conn.commit()
+    try:
+        cur = conn.execute(
+            "INSERT INTO participants (campaign_id, name, email, consent_confirmed, sim_token)"
+            " VALUES (?, ?, ?, 1, ?)",
+            (campaign_id, name, email, sim_token),
+        )
+        conn.commit()
+    except sqlite3.IntegrityError:
+        conn.rollback()
+        audit("participant_rejected",
+              f"campaign={campaign_id} reason=duplicate email={email}")
+        raise ValidationError(
+            f"{email} is already a participant in this campaign."
+        ) from None
+    audit("participant_added", f"campaign={campaign_id} email={email} actor={actor}")
     return int(cur.lastrowid)
 
 
@@ -123,6 +178,8 @@ def get_participant(participant_id: int, campaign_id: int) -> sqlite3.Row | None
 
 def record_event(participant_id: int, campaign_id: int, event_type: str,
                  user_agent: str | None = None) -> None:
+    if event_type not in ("clicked", "submitted"):
+        raise ValueError(f"Unknown event type: {event_type}")
     conn = get_db()
     conn.execute(
         "INSERT INTO events (participant_id, campaign_id, event_type, user_agent)"
@@ -130,6 +187,15 @@ def record_event(participant_id: int, campaign_id: int, event_type: str,
         (participant_id, campaign_id, event_type, user_agent),
     )
     conn.commit()
+
+
+def participant_events(campaign_id: int) -> list[sqlite3.Row]:
+    return get_db().execute(
+        "SELECT p.name, p.email, e.event_type, e.created_at"
+        " FROM events e JOIN participants p ON p.id = e.participant_id"
+        " WHERE e.campaign_id = ? ORDER BY e.id DESC",
+        (campaign_id,),
+    ).fetchall()
 
 
 def campaign_stats(campaign_id: int) -> dict:
@@ -159,10 +225,26 @@ def campaign_stats(campaign_id: int) -> dict:
     }
 
 
-def participant_events(campaign_id: int) -> list[sqlite3.Row]:
-    return get_db().execute(
-        "SELECT p.name, p.email, e.event_type, e.created_at"
-        " FROM events e JOIN participants p ON p.id = e.participant_id"
-        " WHERE e.campaign_id = ? ORDER BY e.id DESC",
-        (campaign_id,),
-    ).fetchall()
+def global_stats() -> dict:
+    """Portfolio-wide numbers for the dashboard."""
+    conn = get_db()
+    campaigns = conn.execute(
+        "SELECT COUNT(*) AS n FROM campaigns"
+    ).fetchone()["n"]
+    participants = conn.execute(
+        "SELECT COUNT(*) AS n FROM participants"
+    ).fetchone()["n"]
+    clicks = conn.execute(
+        "SELECT COUNT(DISTINCT campaign_id || ':' || participant_id) AS n"
+        " FROM events WHERE event_type = 'clicked'"
+    ).fetchone()["n"]
+    submits = conn.execute(
+        "SELECT COUNT(DISTINCT campaign_id || ':' || participant_id) AS n"
+        " FROM events WHERE event_type = 'submitted'"
+    ).fetchone()["n"]
+    return {
+        "campaigns": campaigns,
+        "participants": participants,
+        "clicks": clicks,
+        "submissions": submits,
+    }

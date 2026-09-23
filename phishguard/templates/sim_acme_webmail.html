@@ -1,3 +1,8 @@
+{# This page deliberately looks like a real portal login. Two hard rules:
+   1. The banner below is ALWAYS rendered and cannot be styled away by the
+      trainer without editing this file — training simulations must be honest.
+   2. The form posts only username/password; the server discards both and
+      records a 'submitted' event. See phishguard/sim.py and tests/. #}
 <!doctype html>
 <html lang="en">
 <head>
@@ -27,7 +32,7 @@
     <div class="card">
       <div class="logo">✉️ Acme Webmail</div>
       <div class="sub">Sign in to continue to your mailbox</div>
-      <form method="post" action="{{ url_for('sim.submit', campaign_id=campaign['id'], participant_id=participant['id']) }}">
+      <form method="post" action="{{ url_for('sim.submit', campaign_id=campaign['id'], participant_id=participant['id'], sim_token=participant['sim_token']) }}">
         <label for="username">Email address</label>
         <input id="username" name="username" type="text" autocomplete="off" required>
         <label for="password">Password</label>
