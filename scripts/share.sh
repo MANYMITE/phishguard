@@ -8,6 +8,10 @@
 #     bash scripts/share.sh localtunnel  # uses the local lt binary via npx
 #     bash scripts/share.sh lan          # LAN only (0.0.0.0), no tunnel
 #
+# Env vars:
+#   TUNNEL_PROTOCOL=http2   force cloudflared onto TCP (use on networks that
+#                           block QUIC/UDP — symptom: Cloudflare error 1033)
+#
 # What it does:
 #   1. picks an available tunnel tool (or installs cloudflared with consent)
 #   2. starts PhishGuard bound to localhost
@@ -82,7 +86,10 @@ start_tunnel() {
       have cloudflared || install_cloudflared || true
       if have cloudflared; then
         echo "[*] Starting Cloudflare quick tunnel (no account needed)..."
-        nohup cloudflared tunnel --url "http://127.0.0.1:$PORT" --no-autoupdate > tunnel.log 2>&1 &
+        # TUNNEL_PROTOCOL=http2 helps on networks where QUIC/UDP is blocked
+        # (symptom: Cloudflare error 1033, 'failed to dial ... quic').
+        nohup cloudflared tunnel --url "http://127.0.0.1:$PORT" --no-autoupdate \
+          ${TUNNEL_PROTOCOL:+--protocol "$TUNNEL_PROTOCOL"} > tunnel.log 2>&1 &
         TUNNEL_PID=$!
         for _ in $(seq 1 60); do grep -oE "https://[a-z0-9-]+\.trycloudflare\.com" tunnel.log 2>/dev/null | head -1 | grep -q . && break; sleep 1; done
         URL=$(grep -oE "https://[a-z0-9-]+\.trycloudflare\.com" tunnel.log | head -1)

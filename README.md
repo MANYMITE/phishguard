@@ -104,6 +104,9 @@ you, which also enables `ProxyFix` and secure cookies).
 Notes:
 - **Cloudflare quick tunnels** (`trycloudflare.com`) need no account and give
   a random URL each run — ideal for a one-hour drill.
+- On restrictive networks that block QUIC/UDP (symptom: Cloudflare error
+  **1033** in the browser), force TCP with:
+  `TUNNEL_PROTOCOL=http2 bash scripts/share.sh cloudflare`.
 - **ngrok** free accounts get stable URLs; configure `NGROK_AUTHTOKEN`.
 - **localtunnel** shows visitors a one-time password page (your public IP).
 - The admin panel becomes **public** in tunnel mode. Use a strong secret key
