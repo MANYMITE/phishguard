@@ -212,6 +212,52 @@ class SecurityHeaders(Base):
         self.assertEqual(resp.status_code, 413)
 
 
+class TunnelProxySupport(Base):
+    """Behind a tunnel/reverse proxy, links must carry the public host."""
+
+    PROXY_HEADERS = {
+        "X-Forwarded-Proto": "https",
+        "X-Forwarded-Host": "demo-drill.trycloudflare.com",
+    }
+
+    def _app_with_proxy(self):
+        self.tmp2 = tempfile.TemporaryDirectory()
+        app = create_app({
+            "DATABASE": os.path.join(self.tmp2.name, "p.db"),
+            "TESTING": True,
+            "BEHIND_PROXY": True,
+        })
+        self.addCleanup(self.tmp2.cleanup)
+        return app
+
+    def test_proxy_mode_wraps_wsgi_and_secures_cookies(self):
+        app = self._app_with_proxy()
+        from werkzeug.middleware.proxy_fix import ProxyFix
+        self.assertIsInstance(app.wsgi_app, ProxyFix)
+        self.assertTrue(app.config["SESSION_COOKIE_SECURE"])
+
+    def test_default_mode_ignores_forwarded_headers(self):
+        # No BEHIND_PROXY: forwarded headers must NOT be trusted.
+        from werkzeug.middleware.proxy_fix import ProxyFix
+        self.assertNotIsInstance(self.app.wsgi_app, ProxyFix)
+
+    def test_participant_links_use_public_tunnel_host(self):
+        app = self._app_with_proxy()
+        client = app.test_client()
+        client.post("/login", data={"password": ADMIN_PASSWORD},
+                    headers=self.PROXY_HEADERS)
+        with app.app_context():
+            from phishguard import db
+            cid = db.create_campaign("Tunnel drill", "acme_webmail",
+                                     consent=True)
+            pid = db.create_participant(cid, "A", "a@x.com", consent=True)
+            token = db.get_participant(pid, cid)["sim_token"]
+        resp = client.get(f"/campaigns/{cid}", headers=self.PROXY_HEADERS)
+        self.assertIn(
+            f"https://demo-drill.trycloudflare.com/sim/{cid}/{pid}-{token}"
+            .encode(), resp.data)
+
+
 class TemplateIntegrity(Base):
     def test_templates_contain_honest_banner(self):
         import phishguard.sim as sim

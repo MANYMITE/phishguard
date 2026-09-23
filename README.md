@@ -44,6 +44,9 @@ the ethics into the source — and its test suite.
 - 📝 **Audit trail** — logins, campaign and participant actions to `audit.log`
 - 🖥️ **Clean admin UI** — stats cards, one-click link copying, friendly
   error pages
+- 🌍 **Works on any network** — one command (`scripts/share.sh`) publishes a
+  HTTPS tunnel via Cloudflare (no account), ngrok, or localtunnel; participant
+  links automatically use the public host. LAN mode included.
 - 🐘 **Boring stack** — Python 3 + Flask + stdlib SQLite. No ORM, no build
   step, no Docker. Runs on any Linux distro, macOS, WSL or Windows.
 
@@ -80,6 +83,34 @@ drill. `PORT=8000 python run.py` changes the port; the server binds to
 > password), run behind a proper WSGI server + reverse proxy with TLS, and
 > keep admin access internal.
 
+## Sharing beyond localhost (any network)
+
+The server binds to `127.0.0.1` by design — participants on other devices
+need a tunnel (or LAN) to reach it. One command does everything:
+
+```bash
+bash scripts/share.sh              # auto-pick: cloudflare → ngrok → localtunnel
+bash scripts/share.sh cloudflare   # Cloudflare quick tunnel — no account needed
+bash scripts/share.sh ngrok        # ngrok (set NGROK_AUTHTOKEN once)
+bash scripts/share.sh localtunnel  # localtunnel via npx
+bash scripts/share.sh lan          # LAN only: http://<your-ip>:5000
+```
+
+The script starts PhishGuard, brings up the tunnel, and prints the public
+HTTPS URL. Create participant links in the admin panel as usual — they
+automatically carry the public host (`PHISHGUARD_BEHIND_PROXY=1` is set for
+you, which also enables `ProxyFix` and secure cookies).
+
+Notes:
+- **Cloudflare quick tunnels** (`trycloudflare.com`) need no account and give
+  a random URL each run — ideal for a one-hour drill.
+- **ngrok** free accounts get stable URLs; configure `NGROK_AUTHTOKEN`.
+- **localtunnel** shows visitors a one-time password page (your public IP).
+- The admin panel becomes **public** in tunnel mode. Use a strong secret key
+  and press Ctrl+C to tear the tunnel down when the drill is over.
+- Behind your own reverse proxy instead? Set `PHISHGUARD_BEHIND_PROXY=1` and
+  forward `X-Forwarded-Proto/Host`.
+
 ## Running tests
 
 ```bash
@@ -96,6 +127,9 @@ link tokens, validation, rate limiting, headers).
 phishguard/
 ├── run.py                  # entry point (python run.py)
 ├── install.sh              # cross-distro dependency installer
+├── scripts/
+│   ├── verify.sh           # one-command end-to-end verification
+│   └── share.sh            # tunnel launcher (cloudflare/ngrok/localtunnel/LAN)
 ├── requirements.txt        # Flask. That's it.
 ├── phishguard/
 │   ├── __init__.py         # app factory, security headers, error handlers

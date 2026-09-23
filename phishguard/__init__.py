@@ -44,8 +44,21 @@ def create_app(config_overrides: dict | None = None) -> Flask:
         "PHISHGUARD_SECRET_KEY", "dev-only-change-me"
     )
     app.config["MAX_CONTENT_LENGTH"] = 64 * 1024  # forms are tiny; reject abuse
+    app.config["BEHIND_PROXY"] = os.environ.get(
+        "PHISHGUARD_BEHIND_PROXY", "0"
+    ).lower() in ("1", "true", "yes")
     if config_overrides:
         app.config.update(config_overrides)
+
+    if app.config["BEHIND_PROXY"]:
+        # Running behind a tunnel/reverse proxy (cloudflared, ngrok, nginx…):
+        # trust the forwarding headers so generated participant links carry
+        # the public https host, and lock session cookies down.
+        from werkzeug.middleware.proxy_fix import ProxyFix
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+        # Flask pre-seeds config defaults, so setdefault would be a no-op here.
+        app.config["SESSION_COOKIE_SECURE"] = True
+    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
     if app.config["SECRET_KEY"] == "dev-only-change-me" and not app.config.get(
         "TESTING"
     ):
