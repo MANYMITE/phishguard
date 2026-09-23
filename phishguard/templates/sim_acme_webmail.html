@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Acme Webmail — Sign in</title>
+  <style>
+    * { box-sizing:border-box; }
+    body { margin:0; font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; background:#eef1f5; }
+    .banner { background:#b3541e; color:#fff; text-align:center; padding:.5rem 1rem; font-size:.9rem; }
+    .wrap { max-width:380px; margin:8vh auto; }
+    .card { background:#fff; border-radius:12px; box-shadow:0 8px 30px rgba(20,40,70,.12); padding:2rem; }
+    .logo { font-weight:800; font-size:1.25rem; color:#1c3a5e; letter-spacing:.4px; }
+    .sub { color:#5b6b7b; font-size:.9rem; margin:.2rem 0 1.4rem; }
+    label { display:block; font-size:.85rem; font-weight:600; color:#33475b; margin:.8rem 0 .25rem; }
+    input { width:100%; padding:.6rem .7rem; border:1px solid #ccd6e0; border-radius:8px; font:inherit; }
+    button { width:100%; margin-top:1.2rem; background:#1c5fae; color:#fff; border:0; border-radius:8px; padding:.65rem; font:inherit; font-weight:600; cursor:pointer; }
+    button:hover { background:#174f92; }
+    .fine { margin-top:1rem; font-size:.78rem; color:#7b8a99; text-align:center; }
+  </style>
+</head>
+<body>
+  <div class="banner">🛡️ Training exercise — this page is part of an authorised
+  awareness simulation. Nothing you type here is saved or sent anywhere.</div>
+
+  <div class="wrap">
+    <div class="card">
+      <div class="logo">✉️ Acme Webmail</div>
+      <div class="sub">Sign in to continue to your mailbox</div>
+      <form method="post" action="{{ url_for('sim.submit', campaign_id=campaign['id'], participant_id=participant['id']) }}">
+        <label for="username">Email address</label>
+        <input id="username" name="username" type="text" autocomplete="off" required>
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="off" required>
+        <button type="submit">Sign in</button>
+      </form>
+      <div class="fine">Simulation template: {{ template.title }} · Campaign #{{ campaign["id"] }}</div>
+    </div>
+  </div>
+</body>
+</html>

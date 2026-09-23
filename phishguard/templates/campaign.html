@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}{{ campaign["name"] }} — PhishGuard{% endblock %}
+{% block content %}
+  <h1>{{ campaign["name"] }} <span class="pill">{{ campaign["template_key"] }}</span></h1>
+  <p class="muted">Consent confirmed at creation: <b>yes</b>. Participants:
+     {{ stats.participants }} · Clicks: {{ stats.clicks }} ({{ stats.click_rate }}%) ·
+     Submissions: {{ stats.submissions }} ({{ stats.submit_rate }}%)</p>
+
+  <div class="stats">
+    <div class="stat"><b>{{ stats.participants }}</b><span>participants</span></div>
+    <div class="stat"><b>{{ stats.clicks }}</b><span>opened the link</span></div>
+    <div class="stat"><b>{{ stats.submissions }}</b><span>submitted the form</span></div>
+    <div class="stat"><b>0</b><span>passwords stored — ever</span></div>
+  </div>
+
+  <h2>Add participant</h2>
+  <div class="card">
+    <form method="post" action="{{ url_for('admin.add_participant', campaign_id=campaign['id']) }}">
+      <label for="p-name">Name</label>
+      <input type="text" id="p-name" name="name" required>
+      <label for="p-email">Email</label>
+      <input type="email" id="p-email" name="email" required>
+      <label class="check">
+        <input type="checkbox" name="consent" value="yes">
+        <span>This person has agreed to take part in this training exercise.</span>
+      </label>
+      <button type="submit">Add &amp; generate link</button>
+    </form>
+  </div>
+
+  <h2>Participants &amp; simulation links</h2>
+  {% if participants %}
+    <table>
+      <tr><th>#</th><th>Name</th><th>Email</th><th>Unique simulation link</th></tr>
+      {% for p in participants %}
+        <tr>
+          <td>{{ p["id"] }}</td>
+          <td>{{ p["name"] }}</td>
+          <td>{{ p["email"] }}</td>
+          <td><code>{{ links[p["id"]] }}</code></td>
+        </tr>
+      {% endfor %}
+    </table>
+    <p class="muted">Each link is personal to one participant. Deliver it yourself
+    (email/chat) as part of the agreed drill.</p>
+  {% else %}
+    <p class="muted">No participants yet.</p>
+  {% endif %}
+
+  <h2>Activity</h2>
+  {% if events %}
+    <table>
+      <tr><th>When</th><th>Who</th><th>Event</th></tr>
+      {% for e in events %}
+        <tr>
+          <td class="mono">{{ e["created_at"] }}</td>
+          <td>{{ e["name"] }} &lt;{{ e["email"] }}&gt;</td>
+          <td>{{ e["event_type"] }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p class="muted">Nothing yet — links haven't been visited.</p>
+  {% endif %}
+{% endblock %}

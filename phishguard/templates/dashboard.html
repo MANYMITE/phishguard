@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}PhishGuard — Dashboard{% endblock %}
+{% block content %}
+  <h1>Campaigns</h1>
+
+  <div class="card">
+    <h2 style="margin-top:0">New campaign</h2>
+    <form method="post" action="{{ url_for('admin.create_campaign') }}">
+      <label for="name">Campaign name</label>
+      <input type="text" id="name" name="name" placeholder="e.g. Q4 finance-team drill" required>
+
+      <label for="template_key">Simulation template</label>
+      <select id="template_key" name="template_key">
+        {% for key in templates %}
+          <option value="{{ key }}">{{ key }}</option>
+        {% endfor %}
+      </select>
+
+      <label class="check">
+        <input type="checkbox" name="consent" value="yes">
+        <span>I confirm every participant in this campaign has <b>explicitly consented</b>
+        to take part in an authorised awareness-training exercise, and the simulation
+        will only be delivered inside my organisation/lab. PhishGuard never stores
+        submitted credentials.</span>
+      </label>
+
+      <button type="submit">Create campaign</button>
+    </form>
+  </div>
+
+  {% if campaigns %}
+    <table>
+      <tr><th>#</th><th>Name</th><th>Template</th><th>Participants</th><th>Clicks</th><th>Submissions</th><th></th></tr>
+      {% for row in campaigns %}
+        <tr>
+          <td>{{ row.campaign["id"] }}</td>
+          <td><b>{{ row.campaign["name"] }}</b></td>
+          <td><span class="pill">{{ row.campaign["template_key"] }}</span></td>
+          <td>{{ row.stats.participants }}</td>
+          <td>{{ row.stats.clicks }} <span class="muted">({{ row.stats.click_rate }}%)</span></td>
+          <td>{{ row.stats.submissions }} <span class="muted">({{ row.stats.submit_rate }}%)</span></td>
+          <td><a href="{{ url_for('admin.campaign', campaign_id=row.campaign['id']) }}">open →</a></td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p class="muted">No campaigns yet — create the first one above.</p>
+  {% endif %}
+
+  <div class="card">
+    <h2 style="margin-top:0">How a drill runs</h2>
+    <ol>
+      <li>Create a campaign and tick the consent box.</li>
+      <li>Add each consenting participant by name + email.</li>
+      <li>Copy each participant's unique simulation link and send it to them.</li>
+      <li>Watch clicks/submissions land here, then walk each person through
+          their personal <i>“you were caught”</i> teaching page.</li>
+    </ol>
+    <p class="muted">V1 is deliberately manual — you are the sending engine. SMTP
+    delivery arrives on the roadmap once consent logging is mature.</p>
+  </div>
+{% endblock %}
