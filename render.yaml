@@ -13,5 +13,12 @@ services:
     envVars:
       - key: PHISHGUARD_SECRET_KEY
         generateValue: true
+      # Render terminates TLS at its edge; trust the forwarding headers so
+      # participant links are generated as https and session cookies are
+      # marked Secure (see phishguard/__init__.py).
+      - key: PHISHGUARD_BEHIND_PROXY
+        value: "1"
+      - key: PHISHGUARD_FORCES_HTTPS
+        value: "1"
       - key: PYTHON_VERSION
         value: 3.12.6
