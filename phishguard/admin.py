@@ -144,8 +144,9 @@ def dashboard():
     rows = []
     for c in db.list_campaigns():
         rows.append({"campaign": c, "stats": db.campaign_stats(c["id"])})
+    from .sim import CATALOG
     return render_template("dashboard.html", campaigns=rows,
-                           templates=sorted(TEMPLATES),
+                           templates=CATALOG,
                            gstats=db.global_stats())
 
 

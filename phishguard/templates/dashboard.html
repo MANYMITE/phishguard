@@ -21,8 +21,8 @@
 
       <label for="template_key">Simulation template</label>
       <select id="template_key" name="template_key">
-        {% for key in templates %}
-          <option value="{{ key }}">{{ key }}</option>
+        {% for t in templates %}
+          <option value="{{ t.key }}">{{ t.icon }} {{ t.title }} — {{ t.description }}</option>
         {% endfor %}
       </select>
 

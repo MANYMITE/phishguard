@@ -42,8 +42,14 @@ the ethics into the source — and its test suite.
 - 🛡️ **Security headers** — CSP, `X-Frame-Options: DENY`, `nosniff`,
   `Referrer-Policy: no-referrer`; request size limits
 - 📝 **Audit trail** — logins, campaign and participant actions to `audit.log`
-- 🖥️ **Clean admin UI** — stats cards, one-click link copying, friendly
-  error pages
+- 🖥️ **Two ways to drive it** — a clean web admin UI, or a **hacker-console
+terminal UI** (`python phishguard-cli.py`): ASCII banner, numbered menu,
+ANSI colors, and a BlackEye-style template grid with a quick
+*pick → consent → link* flow
+- 🎭 **Template catalog of 10 fictional portals** — webmail, VPN, banking,
+file drive, payroll, helpdesk, health, airline, parcel, e-learning — all
+rendered from one themed template, all clone-of-nothing, all carrying the
+honest banner
 - 🌍 **Works on any network** — one command (`scripts/share.sh`) publishes a
   HTTPS tunnel via Cloudflare (no account), ngrok, or localtunnel; participant
   links automatically use the public host. LAN mode included.
@@ -120,15 +126,39 @@ Notes:
 python -m unittest discover -s tests -v
 ```
 
-Three suites: `test_safety` (credential-storage invariants), `test_flows`
-(consent gates, simulation lifecycle, stats), `test_security` (auth, CSRF,
-link tokens, validation, rate limiting, headers).
+Four suites: `test_safety` (credential-storage invariants), `test_flows`
+(consent gates, simulation lifecycle, stats, every-catalog-template E2E),
+`test_security` (auth, CSRF, link tokens, validation, rate limiting,
+headers), `test_cli` (terminal UI parsing, consent gate, catalog registry).
+
+## The terminal UI
+
+```bash
+python phishguard-cli.py        # after . .venv/bin/activate
+```
+
+```
+┌─[ PhishGuard ]─[ main menu ]
+   [01] Quick drill (pick → link)   [06] Campaign stats+links
+   [02] New campaign                [07] Open web panel
+   [03] Add participant             [08] Start / stop local server
+   [04] List campaigns              [09] Share on the network (tunnel)
+   [05] Template catalog            [10] Run safety verification
+   [00] Exit
+```
+
+Option [01] is the BlackEye-style flow: pick a portal from the numbered
+catalog grid, confirm consent, and you get the participant's personal link.
+All portals are fictional (Acme Webmail, Meridian Bank, CorpNet VPN, …) —
+that is a deliberate safety line: realistic mechanics, no trademark cloning,
+nothing that could harvest real credentials.
 
 ## Project structure
 
 ```
 phishguard/
 ├── run.py                  # entry point (python run.py)
+├── phishguard-cli.py       # terminal UI entry (python phishguard-cli.py)
 ├── install.sh              # cross-distro dependency installer
 ├── scripts/
 │   ├── verify.sh           # one-command end-to-end verification
@@ -139,8 +169,9 @@ phishguard/
 │   ├── db.py               # SQLite schema + queries + audit trail
 │   ├── safety.py           # credential-field guard + input validators
 │   ├── admin.py            # auth, CSRF, dashboard, campaigns, participants
-│   ├── sim.py              # tokenized simulation/submit/caught routes
-│   ├── templates/          # admin UI + simulation templates
+│   ├── sim.py              # template catalog + tokenized simulation routes
+│   ├── cli.py              # hacker-console terminal UI
+│   ├── templates/          # admin UI + sim_portal.html (all templates)
 │   └── static/
 └── tests/
     ├── test_safety.py      # canary-password, schema, sanitizer tests
@@ -170,7 +201,8 @@ people in your organisation who have consented, on systems you own.
 
 - [ ] CSV participant import
 - [ ] Consent-logged SMTP sending (the GoPhish-style sending engine)
-- [ ] More simulation templates (HR memo, invoice, shared doc)
+- [ ] More catalog portals (HR memo, invoice, shared doc) — one themed file,
+      so adding a portal is one CATALOG entry
 - [ ] Per-participant completion certificates
 - [ ] JSON/CSV report export
 - [ ] Multi-admin accounts with proper password hashing

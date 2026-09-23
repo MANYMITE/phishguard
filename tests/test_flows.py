@@ -144,6 +144,39 @@ class SimulationLifecycle(Base):
         resp = self.client.get("/")
         self.assertIn(b"campaigns</span>", resp.data)
 
+    def test_every_catalog_template_renders_end_to_end(self):
+        """Each catalog portal must serve its page, take a submission, and
+        land on the caught page — with its own title and honest banner."""
+        from phishguard.sim import CATALOG
+        self.login()
+        for entry in CATALOG:
+            with self.subTest(template=entry["key"]):
+                with self.app.app_context():
+                    from phishguard import db
+                    cid = db.create_campaign(
+                        f"Drill {entry['key']}", entry["key"], consent=True)
+                    pid = db.create_participant(
+                        cid, "Sam", f"sam-{entry['key']}@example.com",
+                        consent=True)
+                    token = db.get_participant(pid, cid)["sim_token"]
+                path = f"/sim/{cid}/{pid}-{token}"
+                page = self.client.get(path)
+                self.assertEqual(page.status_code, 200)
+                self.assertIn(entry["title"].encode(), page.data)
+                self.assertIn(b"Training exercise", page.data)  # honest banner
+                sub = self.client.post(path, data={
+                    "username": "sam", "password": "canary-never-stored"})
+                self.assertEqual(sub.status_code, 302)
+                caught = self.client.get(sub.headers["Location"])
+                self.assertEqual(caught.status_code, 200)
+                self.assertIn(b"that was the drill", caught.data)
+
+    def test_dashboard_lists_catalog_titles(self):
+        self.login()
+        resp = self.client.get("/")
+        self.assertIn(b"Acme Webmail", resp.data)
+        self.assertIn(b"Meridian Bank", resp.data)
+
     def test_health(self):
         resp = self.client.get("/health")
         self.assertEqual(resp.status_code, 200)
