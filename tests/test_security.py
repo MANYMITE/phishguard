@@ -220,12 +220,13 @@ class TunnelProxySupport(Base):
         "X-Forwarded-Host": "demo-drill.trycloudflare.com",
     }
 
-    def _app_with_proxy(self):
+    def _app_with_proxy(self, forces_https=True):
         self.tmp2 = tempfile.TemporaryDirectory()
         app = create_app({
             "DATABASE": os.path.join(self.tmp2.name, "p.db"),
             "TESTING": True,
             "BEHIND_PROXY": True,
+            "FORCES_HTTPS": forces_https,
         })
         self.addCleanup(self.tmp2.cleanup)
         return app
@@ -235,6 +236,15 @@ class TunnelProxySupport(Base):
         from werkzeug.middleware.proxy_fix import ProxyFix
         self.assertIsInstance(app.wsgi_app, ProxyFix)
         self.assertTrue(app.config["SESSION_COOKIE_SECURE"])
+
+    def test_lan_mode_keeps_cookies_usable_over_http(self):
+        """LAN mode (http): links use the LAN host, cookies stay un-secured."""
+        app = self._app_with_proxy(forces_https=False)
+        self.assertFalse(app.config["SESSION_COOKIE_SECURE"])
+        client = app.test_client()
+        client.post("/login", data={"password": ADMIN_PASSWORD})
+        resp = client.get("/campaigns/1")  # must NOT bounce to login
+        self.assertEqual(resp.status_code, 200)
 
     def test_default_mode_ignores_forwarded_headers(self):
         # No BEHIND_PROXY: forwarded headers must NOT be trusted.

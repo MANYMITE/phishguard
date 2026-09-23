@@ -47,17 +47,22 @@ def create_app(config_overrides: dict | None = None) -> Flask:
     app.config["BEHIND_PROXY"] = os.environ.get(
         "PHISHGUARD_BEHIND_PROXY", "0"
     ).lower() in ("1", "true", "yes")
+    app.config["FORCES_HTTPS"] = os.environ.get(
+        "PHISHGUARD_FORCES_HTTPS", "0"
+    ).lower() in ("1", "true", "yes")
     if config_overrides:
         app.config.update(config_overrides)
 
     if app.config["BEHIND_PROXY"]:
         # Running behind a tunnel/reverse proxy (cloudflared, ngrok, nginx…):
         # trust the forwarding headers so generated participant links carry
-        # the public https host, and lock session cookies down.
+        # the public https host. Session cookies are marked Secure only when
+        # the deployment actually serves HTTPS (tunnels do; plain-HTTP LAN
+        # mode must not, or clients would drop the login cookie).
         from werkzeug.middleware.proxy_fix import ProxyFix
         app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
-        # Flask pre-seeds config defaults, so setdefault would be a no-op here.
-        app.config["SESSION_COOKIE_SECURE"] = True
+        if app.config["FORCES_HTTPS"]:
+            app.config["SESSION_COOKIE_SECURE"] = True
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
     if app.config["SECRET_KEY"] == "dev-only-change-me" and not app.config.get(
         "TESTING"

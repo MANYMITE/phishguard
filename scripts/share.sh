@@ -24,6 +24,8 @@ cd "$(dirname "$0")/.."
 
 MODE="${1:-auto}"
 PORT="${PORT:-5000}"
+# Tunnels serve HTTPS: mark session cookies Secure. (LAN mode overrides.)
+export PHISHGUARD_FORCES_HTTPS=1
 
 have() { command -v "$1" >/dev/null 2>&1; }
 
@@ -163,6 +165,7 @@ start_tunnel() {
       ;;&
     lan)
       echo "[*] LAN mode: restarting app on 0.0.0.0 ..."
+      export PHISHGUARD_FORCES_HTTPS=0  # plain HTTP: keep cookies usable
       kill "$APP_PID" 2>/dev/null || true
       PHISHGUARD_BEHIND_PROXY=1 PHISHGUARD_HOST=0.0.0.0 PORT="$PORT" run_detached python run.py > phishguard-server.log 2>&1
       APP_PID=$!
