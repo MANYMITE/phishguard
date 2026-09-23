@@ -20,6 +20,8 @@ if __name__ == "__main__":
     host = os.environ.get("PHISHGUARD_HOST", "127.0.0.1")
     port = _int_env("PORT", 5000)
     if host != "127.0.0.1":
-        print(f"⚠ Listening on {host}:{port} — anyone on that network can "
-              f"reach this server. Prefer a tunnel: bash scripts/share.sh")
+        # ASCII-only: Windows consoles default to cp1252 and would crash
+        # on non-encodable characters here.
+        print(f"WARNING: Listening on {host}:{port} - anyone on that network "
+              f"can reach this server. Prefer a tunnel: bash scripts/share.sh")
     app.run(host=host, port=port)
