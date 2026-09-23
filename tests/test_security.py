@@ -241,10 +241,15 @@ class TunnelProxySupport(Base):
         """LAN mode (http): links use the LAN host, cookies stay un-secured."""
         app = self._app_with_proxy(forces_https=False)
         self.assertFalse(app.config["SESSION_COOKIE_SECURE"])
+        with app.app_context():
+            from phishguard import db
+            cid = db.create_campaign("LAN drill", "acme_webmail", consent=True)
         client = app.test_client()
         client.post("/login", data={"password": ADMIN_PASSWORD})
-        resp = client.get("/campaigns/1")  # must NOT bounce to login
+        # Session must survive (Secure cookies would be dropped over http):
+        resp = client.get(f"/campaigns/{cid}")
         self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"LAN drill", resp.data)
 
     def test_default_mode_ignores_forwarded_headers(self):
         # No BEHIND_PROXY: forwarded headers must NOT be trusted.
