@@ -133,6 +133,18 @@ python phishguard-cli.py   <span class="d"># → [01] quick drill → pick porta
     <div class="card"><b>Privacy by design</b><p>Stored data: names, work emails, event counts, hashed user agent. Delete the SQLite file and everything is gone.</p></div>
   </div>
 
+  <h2> host it on render (free)</h2>
+  <p style="color:var(--dim)">No server needed — deploy straight from GitHub to a public HTTPS URL
+  (<span class="c">https://phishguard-xxxx.onrender.com</span>). The generated
+  <code>PHISHGUARD_SECRET_KEY</code> is your admin password (Render → Environment).</p>
+  <p><a href="https://render.com/deploy?repo=https://github.com/MANYMITE/phishguard" target="_blank" rel="noopener">
+    <img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render" height="42">
+  </a></p>
+  <pre class="code"><span class="d"># or self-host on any Linux box:</span>
+git clone https://github.com/MANYMITE/phishguard.git &amp;&amp; cd phishguard
+./install.sh &amp;&amp; . .venv/bin/activate
+PHISHGUARD_SECRET_KEY=<span class="y">"your-secret"</span> gunicorn -w 2 -b 0.0.0.0:8000 wsgi:app</pre>
+
   <h2> get started</h2>
   <p>Clone the repo, run the self-test, run your first drill in under five minutes.<br>
   <a href="https://github.com/MANYMITE/phishguard" target="_blank" rel="noopener">→ github.com/MANYMITE/phishguard</a></p>

@@ -120,6 +120,25 @@ Notes:
 - Behind your own reverse proxy instead? Set `PHISHGUARD_BEHIND_PROXY=1` and
   forward `X-Forwarded-Proto/Host`.
 
+## Hosting on Render (free, one click)
+
+The repo ships a Render blueprint (`render.yaml`) and a WSGI entry point
+(`wsgi.py`). Easiest path — sign in to [render.com](https://render.com) with
+your GitHub account, then:
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/MANYMITE/phishguard)
+
+Render clones the repo, installs requirements, and serves the app with
+gunicorn on a public HTTPS URL like `https://phishguard-xxxx.onrender.com`.
+The **admin password** is the generated `PHISHGUARD_SECRET_KEY` — read/change
+it under your service → **Environment**.
+
+Notes for the free tier: the service sleeps after ~15 idle minutes (first
+visit takes ~30s to wake), and the SQLite database resets on redeploy — fine
+for demos and short drills; for a persistent deployment attach a Render disk
+or run on a VPS. Because it's public HTTPS, tunnel mode is unnecessary: the
+admin panel and participant links work from any network as-is.
+
 ## Running tests
 
 ```bash

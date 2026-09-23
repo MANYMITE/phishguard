@@ -1,0 +1,17 @@
+# Render.com Blueprint — deploys PhishGuard as a free web service.
+# Push this file, then: render.com → New + → Blueprint → pick this repo.
+# Render injects $PORT; gunicorn binds to it. PHISHGUARD_SECRET_KEY doubles
+# as the admin password and is generated once per service (change it in the
+# Render dashboard → Environment).
+services:
+  - type: web
+    name: phishguard
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn -w 2 -b 0.0.0.0:$PORT wsgi:app
+    envVars:
+      - key: PHISHGUARD_SECRET_KEY
+        generateValue: true
+      - key: PYTHON_VERSION
+        value: 3.12.6
