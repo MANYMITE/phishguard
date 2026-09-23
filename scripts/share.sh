@@ -2,8 +2,10 @@
 # PhishGuard tunnel launcher — make your drill reachable from any network.
 #
 # Usage:
-#     bash scripts/share.sh              # auto: cloudflared → ngrok → localtunnel
+#     bash scripts/share.sh              # auto: cloudflared → pinggy → ngrok → localtunnel
 #     bash scripts/share.sh cloudflare   # quick tunnel, no account needed
+#     bash scripts/share.sh pinggy       # SSH-over-443 tunnel, no account (great on
+#                                        # networks that block QUIC/7844 or flaky relays)
 #     bash scripts/share.sh ngrok        # needs ngrok + NGROK_AUTHTOKEN
 #     bash scripts/share.sh localtunnel  # uses the local lt binary via npx
 #     bash scripts/share.sh lan          # LAN only (0.0.0.0), no tunnel
@@ -109,6 +111,21 @@ start_tunnel() {
         [ "$MODE" = "cloudflare" ] && exit 1
       elif [ "$MODE" = "cloudflare" ]; then
         exit 1
+      fi
+      ;;&
+    pinggy|auto)
+      if have ssh; then
+        echo "[*] Starting Pinggy tunnel (SSH over port 443, no account)..."
+        run_detached ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=30 \
+          -p 443 -R0:localhost:$PORT a.pinggy.io > tunnel.log 2>&1
+        TUNNEL_PID=$!
+        for _ in $(seq 1 30); do grep -oE "https://[a-z0-9.-]+\.free\.pinggy\.link" tunnel.log 2>/dev/null | head -1 | grep -q . && break; sleep 1; done
+        URL=$(grep -oE "https://[a-z0-9.-]+\.free\.pinggy\.link" tunnel.log | head -1)
+        [ -n "$URL" ] && { print_urls "$URL"; wait; return; }
+        echo "[!] Pinggy failed:"; tail -3 tunnel.log
+        [ "$MODE" = "pinggy" ] && exit 1
+      elif [ "$MODE" = "pinggy" ]; then
+        echo "✖ ssh client not found."; exit 1
       fi
       ;;&
     ngrok|auto)
