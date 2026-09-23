@@ -1,5 +1,8 @@
 # PhishGuard 🛡️
 
+[![tests](https://github.com/MANYMITE/phishguard/actions/workflows/tests.yml/badge.svg)](https://github.com/MANYMITE/phishguard/actions/workflows/tests.yml)
+[![website](https://img.shields.io/badge/website-manymite.github.io%2Fphishguard-39ff5a)](https://manymite.github.io/phishguard/)
+
 **A consent-based phishing-awareness training platform.** Run realistic phishing
 simulations for people who have agreed to be tested — and never store their
 credentials, ever.

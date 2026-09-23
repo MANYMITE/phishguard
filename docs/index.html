@@ -42,6 +42,13 @@
   pre.code{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:1rem 1.2rem;overflow-x:auto;font-size:.88rem}
   .banner{border:1px dashed var(--amber);border-radius:10px;padding:.9rem 1.1rem;color:var(--amber);font-size:.9rem;margin:1.5rem 0}
   footer{border-top:1px solid var(--line);margin-top:3.5rem;padding:1.4rem 0 2.4rem;color:var(--dim);font-size:.85rem}
+  .shots{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.2rem;margin:1rem 0}
+  .shots figure{margin:0;border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:hidden}
+  .shots img{display:block;width:100%;height:auto}
+  .shots figcaption{padding:.6rem .8rem;font-size:.82rem;color:var(--dim);border-top:1px solid var(--line)}
+  .faq details{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:.9rem 1.2rem;margin:.6rem 0}
+  .faq summary{cursor:pointer;color:var(--green)}
+  .faq p{color:var(--dim);font-size:.92rem;margin:.6rem 0 0}
   .pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:.15rem .7rem;color:var(--dim);font-size:.8rem;margin-right:.4rem}
   @media(max-width:640px){.term-body{font-size:.78rem}.hero{padding:2.8rem 0 2rem}}
 </style>
@@ -91,7 +98,8 @@
   <p>
     <a class="pill" href="https://github.com/MANYMITE/phishguard">source</a>
     <a class="pill" href="https://github.com/MANYMITE/phishguard#readme">docs</a>
-    <span class="pill">50 tests ✓</span><span class="pill">MIT</span><span class="pill">Python 3 + Flask</span>
+    <a class="pill" href="https://github.com/MANYMITE/phishguard/actions/workflows/tests.yml"><img src="https://github.com/MANYMITE/phishguard/actions/workflows/tests.yml/badge.svg" alt="tests" style="vertical-align:middle"></a>
+    <span class="pill">MIT</span><span class="pill">Python 3 + Flask</span>
   </p>
 </div>
 
@@ -131,6 +139,45 @@ python phishguard-cli.py   <span class="d"># → [01] quick drill → pick porta
     <div class="card"><b>Honest pages</b><p>Every simulation shows an unremovable banner: “training exercise — nothing you type is saved.”</p></div>
     <div class="card"><b>Teaching moment</b><p>Submitters land on an education page — check senders, hover links, refuse urgency, go direct, report.</p></div>
     <div class="card"><b>Privacy by design</b><p>Stored data: names, work emails, event counts, hashed user agent. Delete the SQLite file and everything is gone.</p></div>
+  </div>
+
+  <h2> screenshots</h2>
+  <div class="shots">
+    <figure><img src="screenshots/02-dashboard.png" alt="PhishGuard admin dashboard" loading="lazy"><figcaption><span class="g">[02]</span> admin dashboard — live stats, consent-gated campaign form</figcaption></figure>
+    <figure><img src="screenshots/04-sim-page.png" alt="Simulation portal with honest banner" loading="lazy"><figcaption><span class="g">[04]</span> what the participant sees — honest banner on top, always</figcaption></figure>
+    <figure><img src="screenshots/05-caught-page.png" alt="Caught page" loading="lazy"><figcaption><span class="g">[05]</span> the teaching moment — submitters land here, not a harvest</figcaption></figure>
+    <figure><img src="screenshots/03-campaign.png" alt="Campaign page with personal links" loading="lazy"><figcaption><span class="g">[03]</span> per-person unguessable links, activity log, copy button</figcaption></figure>
+  </div>
+
+  <h2> faq</h2>
+  <div class="faq">
+    <details open><summary>Is this a phishing tool?</summary>
+      <p>No. It's the opposite: a <b>training</b> tool that borrows phishing's
+      teaching mechanics. It refuses to run without consent at three separate
+      layers, shows an honest banner on every simulation, and its database has
+      <b>no column that could store a password</b> — enforced by tests that
+      byte-scan the DB after posting a canary credential.</p></details>
+    <details><summary>Could someone use it to steal real passwords?</summary>
+      <p>Not with this codebase. Submissions are dropped without being read;
+      only <code>clicked</code>/<code>submitted</code> events (plus a hashed
+      user agent) are recorded. Someone determined to harvest credentials would
+      have to rewrite the app — at which point they're just writing their own
+      phishing kit, not using PhishGuard.</p></details>
+    <details><summary>What are the portals clones of?</summary>
+      <p>Nothing — deliberately. “Acme Webmail”, “Meridian Bank”,
+      “CorpNet VPN” etc. are fictional. Realistic mechanics, no trademark
+      cloning, so the project stays publishable and legal everywhere.</p></details>
+    <details><summary>Does it send emails?</summary>
+      <p>Not yet — V1 delivery is deliberately manual: <i>you</i> are the
+      sending engine, and consent-logged SMTP is on the roadmap. Nobody gets
+      an email they didn't agree to.</p></details>
+    <details><summary>Where does it run?</summary>
+      <p>Anywhere Python 3 runs: any Linux distro, macOS, WSL, Windows, or
+      one-click on Render. Data lives in one SQLite file you can delete when
+      the exercise is over — that removes everything.</p></details>
+    <details><summary>Is it really free?</summary>
+      <p>MIT-licensed, no accounts, no telemetry, no paid tier. GitHub Pages
+      hosts this site; Render's free tier (or your own box) hosts the app.</p></details>
   </div>
 
   <h2> host it on render (free)</h2>
